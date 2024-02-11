@@ -94,7 +94,7 @@ pub fn run(config: Config) -> MyResult<()> {
             }
             Ok(content) => {
                 println!("==> {} <==", filename);
-                for line_result in content.lines() {
+                for line_result in content.lines().take(config.lines) {
                     println!("{}", line_result?);
                 }
             }
