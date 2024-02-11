@@ -1,4 +1,8 @@
-use std::error::Error;
+use std::{
+    error::Error,
+    fs::File,
+    io::{BufRead, BufReader},
+};
 
 use clap::{App, Arg};
 
@@ -48,36 +52,55 @@ pub fn get_args() -> MyResult<Config> {
     if let Err(_e) = parse_positive_int(str_lines) {
         eprintln!("illegal line count -- {}", str_lines);
     }
-    let lines = parse_positive_int(str_lines)?;
 
-    let str_bytes = matches.value_of("bytes");
-    let bytes = match str_bytes {
-        Some(x) => {
-            if let Err(_e) = parse_positive_int(x) {
-                eprintln!("illegal byte count -- {}", str_bytes.unwrap());
-            }
-            Some(parse_positive_int(x).unwrap())
-        }
-        None => None,
-    };
+    let lines = matches
+        .value_of("lines")
+        .map(parse_positive_int)
+        .transpose()
+        .map_err(|e| format!("illegal line count -- {}", e))?;
+
+    let bytes = matches
+        .value_of("bytes")
+        .map(parse_positive_int)
+        .transpose()
+        .map_err(|e| format!("illegal byte count -- {}", e))?;
 
     Ok(Config {
         files,
-        lines,
+        lines: lines.unwrap(),
         bytes,
     })
 }
 
-pub fn run(config: Config) -> MyResult<()> {
-    dbg!(config);
-    Ok(())
-}
-
 fn parse_positive_int(val: &str) -> MyResult<usize> {
-    return match val.parse() {
+    match val.parse() {
         Ok(n) if n > 0 => Ok(n),
         _ => Err(From::from(val)),
-    };
+    }
+}
+
+fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
+    match filename {
+        "-" => Ok(Box::new(BufReader::new(std::io::stdin()))),
+        _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
+    }
+}
+
+pub fn run(config: Config) -> MyResult<()> {
+    for filename in config.files {
+        match open(&filename) {
+            Err(err) => {
+                eprintln!("{}: {}", filename, err)
+            }
+            Ok(content) => {
+                println!("==> {} <==", filename);
+                for line_result in content.lines() {
+                    println!("{}", line_result?);
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 #[test]
