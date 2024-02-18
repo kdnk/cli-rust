@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read},
 };
 
 use clap::{App, Arg};
@@ -87,15 +87,37 @@ fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
 }
 
 pub fn run(config: Config) -> MyResult<()> {
-    for filename in config.files {
+    let num_files = config.files.len();
+
+    for (file_num, filename) in config.files.iter().enumerate() {
         match open(&filename) {
             Err(err) => {
                 eprintln!("{}: {}", filename, err)
             }
-            Ok(content) => {
-                println!("==> {} <==", filename);
-                for line_result in content.lines().take(config.lines) {
-                    println!("{}", line_result?);
+            Ok(mut file) => {
+                if num_files > 1 {
+                    println!(
+                        "{}==> {} <==",
+                        if file_num > 0 { "\n" } else { "" },
+                        filename
+                    )
+                }
+
+                if let Some(num_bytes) = config.bytes {
+                    let mut buffer = vec![0; num_bytes];
+                    let mut handle = file.take(num_bytes as u64);
+                    let bytes_read = handle.read(&mut buffer)?;
+                    print!("{}", String::from_utf8_lossy(&buffer[..bytes_read]))
+                } else {
+                    let mut line = String::new();
+                    for _ in 0..config.lines {
+                        let bytes = file.read_line(&mut line)?;
+                        if bytes == 0 {
+                            break;
+                        }
+                        print!("{}", line);
+                        line.clear();
+                    }
                 }
             }
         }
