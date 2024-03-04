@@ -93,35 +93,60 @@ pub fn get_args() -> MyResult<Config> {
 }
 
 pub fn run(config: Config) -> MyResult<()> {
-    for filename in config.files {
+    let mut total_lines = 0;
+    let mut total_words = 0;
+    let mut total_chars = 0;
+    let mut total_bytes = 0;
+
+    for filename in config.files.clone() {
         match open(&filename) {
             Err(err) => eprintln!("{}: {}", &filename, err),
             Ok(file) => {
                 let info = count(file)?;
 
-                if config.lines {
-                    print!("{:>8}", info.num_lines)
-                }
+                total_lines += info.num_lines;
+                total_words += info.num_words;
+                total_chars += info.num_chars;
+                total_bytes += info.num_bytes;
 
-                if config.words {
-                    print!("{:>8}", info.num_words)
-                }
-
-                if config.chars {
-                    print!("{:>8}", info.num_chars);
-                } else if config.bytes {
-                    print!("{:>8}", info.num_bytes);
-                }
-
-                if &filename != "-" {
-                    println!(" {}", &filename);
-                } else {
-                    println!();
-                }
+                render(&info, &config, &filename);
             }
         }
     }
+
+    if config.files.len() > 1 {
+        let total_info = FileInfo {
+            num_lines: total_lines,
+            num_words: total_words,
+            num_chars: total_chars,
+            num_bytes: total_bytes,
+        };
+        render(&total_info, &config, "total");
+    }
+
     Ok(())
+}
+
+fn render(info: &FileInfo, config: &Config, filename: &str) {
+    if config.lines {
+        print!("{:>8}", info.num_lines)
+    }
+
+    if config.words {
+        print!("{:>8}", info.num_words)
+    }
+
+    if config.chars {
+        print!("{:>8}", info.num_chars);
+    } else if config.bytes {
+        print!("{:>8}", info.num_bytes);
+    }
+
+    if filename != "-" {
+        println!(" {}", &filename);
+    } else {
+        println!();
+    }
 }
 
 fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
