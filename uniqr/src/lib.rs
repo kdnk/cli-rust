@@ -79,7 +79,7 @@ pub fn run(config: Config) -> MyResult<()> {
             break;
         }
 
-        if previous != line {
+        if previous.trim_end() != line.trim_end() {
             print(count, &previous)?;
             previous = line.clone();
             count = 0;
