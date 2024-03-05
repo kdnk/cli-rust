@@ -54,13 +54,27 @@ pub fn run(config: Config) -> MyResult<()> {
     let mut file = open(&config.in_file).map_err(|e| format!("{}: {}", config.in_file, e))?;
     let mut line = String::new();
 
+    let mut previous = String::new();
+    let mut prev_count = 0;
     loop {
         let bytes = file.read_line(&mut line)?;
+
+        if previous == line || previous.is_empty() {
+            previous = line.clone();
+            prev_count += 1;
+        } else {
+            if config.count {
+                print!("{} ", prev_count);
+            }
+            print!("{}", previous);
+            previous = line.clone();
+            prev_count = 1;
+        }
+
         if bytes == 0 {
             break;
         }
 
-        print!("{}", line);
         line.clear();
     }
     Ok(())
