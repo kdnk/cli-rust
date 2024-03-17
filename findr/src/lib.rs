@@ -41,6 +41,7 @@ pub fn get_args() -> MyResult<Config> {
                 .value_name("TYPE")
                 .takes_value(true)
                 .possible_values(&["f", "d", "l"])
+                .multiple(true)
                 .help("Entry type"),
         )
         .arg(
